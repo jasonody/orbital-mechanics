@@ -11,8 +11,7 @@ class OrbitPropagator:
     self.tspan = tspan
     self.dt = dt
     self.cb = cb
-  
-  def propagate_orbit(self):
+
     # total number of steps
     self.n_steps = int(np.ceil(self.tspan / self.dt))
 
@@ -29,7 +28,8 @@ class OrbitPropagator:
     self.solver = ode(self.diffy_q)
     self.solver.set_integrator('lsoda')
     self.solver.set_initial_value(self.y0, 0)
-
+  
+  def propagate_orbit(self):
     # propagate orbit
     while self.solver.successful() and self.step < self.n_steps:
       self.solver.integrate(self.solver.t + self.dt)
