@@ -1,3 +1,4 @@
+import math as m
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.axes3d import Axes3D
@@ -50,3 +51,69 @@ def plot_n_orbits(rs, labels, cb=pd.earth, show_plot=False, save_plot=False, tit
       plt.show()
     if save_plot:
       plt.savefig(title.replace(" ", "_") + '.png', dpi=300)
+  
+def coes2rv(coes, deg=False, mu=pd.earth['mu']):
+  if deg:
+    # conver to radians
+    a, e, i, ta, aop, raan = coes
+    i *= d2r
+    ta *= d2r
+    aop *= d2r
+    raan *= d2r
+  else:
+    a, e, i, ta, aop, raan = coes
+  
+  E = ecc_anomonly([ta, e], 'tae')
+
+  r_norm = a * (1 - e**2) / (1 + e * np.cos(ta))
+
+  # calculate r and v vectors in perifocal fram
+  r_perif = r_norm * np.array([m.cos(ta), m.sin(ta), 0])
+  v_perif = m.sqrt(mu * a) / r_norm * np.array([-m.sin(E), m.cos(E) * m.sqrt(1 - e**2), 0])
+
+  # rotation matrix from perifocal to ECI
+  perif2eci = np.transpose(eci2perif(raan, aop, i))
+
+  # calculate r and v vectors in inertial framea
+  r = np.dot(perif2eci, r_perif)
+  v = np.dot(perif2eci, v_perif)
+
+  return r,v
+
+def eci2perif(raan, aop, i):
+  row0 = [-m.sin(raan) * m.cos(i) * m.sin(aop) + m.cos(raan) * m.cos(aop), m.cos(raan) * m.cos(i) * m.sin(aop) + m.sin(raan) * m.cos(aop), m.sin(i) * m.sin(aop)]
+  row1 = [-m.sin(raan) * m.cos(i) * m.cos(aop) - m.cos(raan) * m.sin(aop), m.cos(raan) * m.cos(i) * m.cos(aop) - m.sin(raan) * m.sin(aop), m.sin(i) * m.cos(aop)]
+  row2 = [m.sin(raan) * m.sin(i), -m.cos(raan) * m.sin(i), m.cos(i)]
+
+  return np.array([row0,row1,row2])
+
+def ecc_anomonly(arr, method, tol=1e-8):
+  if method == 'newton':
+    # Newton's method for iteratively finding E
+    Me, e = arr
+    E1 = 0.0
+    if Me < np.pi / 2.0: 
+      E0 = Me + e / 2.0
+    else:
+      E0 = Me - e
+    
+    for n in range (200): # arbitrary max number of steps
+      ratio = (E0 - e * np.sin(E0) - Me) / (1 - e * np.cos(E0))
+      if abs(ratio) < tol:
+        if n == 0:
+          return E0
+        else:
+          return E1
+      else: 
+        E1 = E0 - ratio
+        E0 = E1
+    # did not converge
+    return False 
+  elif method == 'tae':
+    ta, e = arr
+    
+    return 2 * m.atan(m.sqrt((1 - e) / (1 + e)) * m.tan(ta / 2.0))
+  else:
+    print('Invalid method for accentric anomoly')
+
+  
