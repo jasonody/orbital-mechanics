@@ -6,14 +6,14 @@ import planetary_data as pd
 import tools as t
 
 class OrbitPropagator:
-  def __init__(self, state0, tspan, dt, coes=False, cb=pd.earth): # dt = timestep, cb = central body
+  def __init__(self, state0, tspan, dt, coes=False, deg=True, cb=pd.earth): # dt = timestep, cb = central body
     if coes:
-      self.r0, self.v0 = t.coes2rv(state0, deg=True, mu=cb['mu'])
+      self.r0, self.v0, date = t.coes2rv(state0, deg=deg, mu=cb['mu'])
     else:
       self.r0 = state0[:3]
       self.v0 = state0[3:]
 
-    self.y0 = self.r0.tolist() + self.v0.tolist()
+    self.y0 = list(self.r0) + list(self.v0)
     self.tspan = tspan
     self.dt = dt
     self.cb = cb
@@ -32,6 +32,8 @@ class OrbitPropagator:
     self.solver = ode(self.diffy_q)
     self.solver.set_integrator('lsoda')
     self.solver.set_initial_value(self.y0, 0)
+
+    self.propagate_orbit()
   
   def propagate_orbit(self):
     # propagate orbit
