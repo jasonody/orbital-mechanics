@@ -5,8 +5,16 @@ from scipy.integrate import ode
 import planetary_data as pd
 import tools as t
 
+def null_perts(): # no perturbations
+  return {
+    'J2': False,
+    'aero': False,
+    'moon_grav': False,
+    'solar_gravity': False
+  }
+
 class OrbitPropagator:
-  def __init__(self, state0, tspan, dt, coes=False, deg=True, cb=pd.earth): # dt = timestep, cb = central body
+  def __init__(self, state0, tspan, dt, coes=False, deg=True, cb=pd.earth, perts=null_perts()): # dt = timestep, cb = central body
     if coes:
       self.r0, self.v0, date = t.coes2rv(state0, deg=deg, mu=cb['mu'])
     else:
@@ -33,6 +41,9 @@ class OrbitPropagator:
     self.solver.set_integrator('lsoda')
     self.solver.set_initial_value(self.y0, 0)
 
+    # define perturbations dictionary
+    self.perts = perts
+
     self.propagate_orbit()
   
   def propagate_orbit(self):
@@ -55,9 +66,21 @@ class OrbitPropagator:
     norm_r = np.linalg.norm(r)
 
     # two body acceleration
-    ax, ay, az = -r * self.cb['mu'] / norm_r**3
+    a = -r * self.cb['mu'] / norm_r**3
 
-    return [vx,vy,vz,ax,ay,az]
+    # J2 perturbation
+    if self.perts['J2']:
+      z2 = r[2]**2
+      r2 = norm_r**2
+      tx = r[0] / norm_r * (5 * z2 / r2 - 1)
+      ty = r[1] / norm_r * (5 * z2 / r2 - 1)
+      tz = r[2] / norm_r * (5 * z2 / r2 - 3)
+
+      a_j2 = 1.5 * self.cb['J2'] * self.cb['mu'] * self.cb['radius']**2 / norm_r**4 * np.array([tx,ty,tz])
+
+      a += a_j2
+
+    return [vx,vy,vz,a[0],a[1],a[2]]
   
   def plot_3d(self, show_plot=False, save_plot=False, title='Some Plot'):
     # 3D plot

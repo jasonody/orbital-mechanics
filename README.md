@@ -14,3 +14,6 @@ Orbit propagator for Keplerian / classical orbital elements:
 
 Two Line Element Sets (TLEs):
 - two_line_element_sets.py
+
+J2 perturbation:
+- j2_perturbation_test.py
