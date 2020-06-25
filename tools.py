@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 import planetary_data as pd
 
 d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 def plot_n_orbits(rs, labels, cb=pd.earth, show_plot=False, save_plot=False, title='Many Orbits'):
     # 3D plot
@@ -80,6 +81,58 @@ def coes2rv(coes, deg=False, mu=pd.earth['mu']):
   v = np.dot(perif2eci, v_perif)
 
   return r, v, date
+
+def rv2coes(r, v, mu=pd.earth['mu'], degrees=False, print_results=False):
+  # norm of position vector
+  r_norm = np.linalg.norm(r)
+
+  # specific angular momentum
+  h = np.cross(r, v)
+  h_norm = np.linalg.norm(h)
+
+  # inclination
+  i = m.acos(h[2] / h_norm)
+
+  # eccentricity vector
+  e = ((np.linalg.norm(v)**2 - mu / r_norm) * r - np.dot(r, v) * v) / mu
+
+  # eccentricity scalar
+  e_norm = np.linalg.norm(e)
+
+  # node line
+  N = np.cross([0,0,1], h)
+  N_norm = np.linalg.norm(N)
+
+  # RAAN
+  raan = m.acos(N[0] / N_norm)
+  if N[1] < 0:
+    raan = 2 * np.pi - raan # quadrant check
+  
+  # arguement of perigee
+  aop = m.acos(np.dot(N, e) / N_norm / e_norm)
+  if e[2] < 0:
+    aop = 2 * np.pi - aop # quadrant check
+
+  # true anomaly
+  ta = m.acos(np.dot(e, r) / e_norm / r_norm)
+  if np.dot(r, v) < 0:
+    ta = 2 * np.pi - ta # quadrant check
+  
+  # semi major axis
+  a = r_norm * (1 + e_norm * m.cos(ta)) / (1 - e_norm**2)
+
+  if print_results:
+    print('a', a)
+    print('e', e_norm)
+    print('i', i * r2d)
+    print('RAAN', raan * r2d)
+    print('AOP', aop * r2d)
+    print('TA', ta * r2d)
+  
+  if degrees:
+    return [a,e_norm,i * r2d,ta * r2d,aop * r2d,raan * r2d]
+  else: # radians
+    return [a,e_norm,i,ta,aop,raan]
 
 def eci2perif(raan, aop, i):
   row0 = [-m.sin(raan) * m.cos(i) * m.sin(aop) + m.cos(raan) * m.cos(aop), m.cos(raan) * m.cos(i) * m.sin(aop) + m.sin(raan) * m.cos(aop), m.sin(i) * m.sin(aop)]

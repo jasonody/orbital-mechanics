@@ -82,6 +82,14 @@ class OrbitPropagator:
 
     return [vx,vy,vz,a[0],a[1],a[2]]
   
+  def calculate_coes(self, degrees=True):
+    print('Calculating COEs...')
+
+    self.coes = np.zeros((self.n_steps, 6))
+
+    for n in range(self.n_steps):
+      self.coes[n,:] = t.rv2coes(self.rs[n,:], self.vs[n,:], mu=self.cb['mu'], degrees=degrees)
+
   def plot_3d(self, show_plot=False, save_plot=False, title='Some Plot'):
     # 3D plot
     fig = plt.figure(figsize=(16,8))
